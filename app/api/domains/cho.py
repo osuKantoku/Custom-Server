@@ -198,7 +198,7 @@ async def bancho_handler(
         # tell their client to reconnect immediately.
         return Response(
             content=(
-                app.packets.notification("Server has restarted.")
+                app.packets.notification("サーバーが再起動されました (Server has restarted)")
                 + app.packets.restart_server(0)  # ms until reconnection
             ),
         )
@@ -296,7 +296,7 @@ class SendMessage(BasePacket):
 
     async def handle(self, player: Player) -> None:
         if player.silenced:
-            log(f"{player} sent a message while silenced.", Ansi.LYELLOW)
+            log(f"{player} のメッセージはしばらくミュートされます ({player}'s will be muted for a while)", Ansi.LYELLOW)
             return
 
         # remove leading/trailing whitespace
@@ -440,27 +440,27 @@ class StatsUpdateRequest(BasePacket):
 # Some messages to send on welcome/restricted/etc.
 # TODO: these should probably be moved to the config.
 WELCOME_MSG = "\n".join(
-    (
-        f"Welcome to {BASE_DOMAIN}.",
-        "To see a list of commands, use !help.",
-        "We have a public (Discord)[https://discord.gg/ShEQgUx]!",
-        "Enjoy the server!",
+        (
+        f"{BASE_DOMAIN}に接続しました！",
+        "リプレイやスコアは公式Discordより参照できます",
+	    "右のリンクより是非ご参加ください！(Mamestagram)[https://discord.com/invite/q5ptEFraw5]",
+        "Enjoy the server ~!",
     ),
 )
 
 RESTRICTED_MSG = (
-    "Your account is currently in restricted mode. "
-    "If you believe this is a mistake, or have waited a period "
-    "greater than 3 months, you may appeal via the form on the site."
+    "あなたのアカウントは制限されています"
+    "この措置に心当たりがない場合は管理者へご連絡ください"
+    "(この期間中は他のプレイヤーと一切交流をすることができません)"
 )
 
 WELCOME_NOTIFICATION = app.packets.notification(
-    f"Welcome back to {BASE_DOMAIN}!\nRunning bancho.py v{app.settings.VERSION}.",
+    f"{BASE_DOMAIN}に接続しました！",
 )
 
 OFFLINE_NOTIFICATION = app.packets.notification(
-    "The server is currently running in offline mode; "
-    "some features will be unavailable.",
+    "サーバーがオフラインモードになりました..;;"
+    "事前告知がない場合は管理者へ速やかにお知らせください",
 )
 
 
@@ -520,7 +520,6 @@ def parse_login_data(data: bytes) -> LoginData:
         "uninstall_md5": uninstall_md5,
         "disk_signature_md5": disk_signature_md5,
     }
-
 
 async def login(
     headers: Mapping[str, str],
@@ -610,7 +609,7 @@ async def login(
             "osu_token": "empty-adapters",
             "response_body": (
                 app.packets.user_id(-1)
-                + app.packets.notification("Please restart your osu! and try again.")
+                + app.packets.notification("アダプターの接続に失敗しました。クライアントを再起動してください!")
             ),
         }
 
@@ -636,7 +635,7 @@ async def login(
                     "osu_token": "user-ghosted",
                     "response_body": (
                         app.packets.user_id(-1)
-                        + app.packets.notification("User already logged in.")
+                        + app.packets.notification("既にログインが完了しています!")
                     ),
                 }
 
@@ -650,7 +649,7 @@ async def login(
         return {
             "osu_token": "unknown-username",
             "response_body": (
-                app.packets.notification(f"{BASE_DOMAIN}: Unknown username")
+                app.packets.notification(f"{BASE_DOMAIN}: このユーザーネームは存在しません")
                 + app.packets.user_id(-1)
             ),
         }
@@ -679,7 +678,7 @@ async def login(
             return {
                 "osu_token": "incorrect-password",
                 "response_body": (
-                    app.packets.notification(f"{BASE_DOMAIN}: Incorrect password")
+                    app.packets.notification(f"{BASE_DOMAIN}: パスワードが異なります")
                     + app.packets.user_id(-1)
                 ),
             }
@@ -688,7 +687,7 @@ async def login(
             return {
                 "osu_token": "incorrect-password",
                 "response_body": (
-                    app.packets.notification(f"{BASE_DOMAIN}: Incorrect password")
+                    app.packets.notification(f"{BASE_DOMAIN}: パスワードが異なります")
                     + app.packets.user_id(-1)
                 ),
             }
@@ -765,7 +764,7 @@ async def login(
                     "osu_token": "contact-staff",
                     "response_body": (
                         app.packets.notification(
-                            "Please contact staff directly to create an account.",
+                            "管理者にアカウントを作成してもらうよう依頼してください!",
                         )
                         + app.packets.user_id(-1)
                     ),
@@ -791,7 +790,7 @@ async def login(
             "osu_token": "login-failed",
             "response_body": (
                 app.packets.notification(
-                    f"{BASE_DOMAIN}: Login failed. Please contact an admin.",
+                    f"{BASE_DOMAIN}: ログインに失敗しました。管理者にご連絡ください",
                 )
                 + app.packets.user_id(-1)
             ),
@@ -1181,8 +1180,8 @@ class SendPrivateMessage(BasePacket):
                 # will receive the mail @ next login.
                 player.enqueue(
                     app.packets.notification(
-                        f"{target.name} is currently offline, but will "
-                        "receive your messsage on their next login.",
+                        f"{target.name} は現在オフラインですが"
+                        "次回ログイン時にメッセージを受信します",
                     ),
                 )
 
@@ -1315,7 +1314,7 @@ class MatchCreate(BasePacket):
             player.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multiplayer is not available while restricted.",
+                    "アカウント制限中は他のユーザーと交流をすることはできません!",
                 ),
             )
             return
@@ -1324,7 +1323,7 @@ class MatchCreate(BasePacket):
             player.enqueue(
                 app.packets.match_join_fail()
                 + app.packets.notification(
-                    "Multiplayer is not available while silenced.",
+                    "アカウント制限中は他のユーザーと交流をすることはできません!",
                 ),
             )
             return
@@ -1333,7 +1332,7 @@ class MatchCreate(BasePacket):
 
         if match_id is None:
             # failed to create match (match slots full).
-            player.send_bot("Failed to create match (no slots available).")
+            player.send_bot("マッチの作成に失敗しました!")
             player.enqueue(app.packets.match_join_fail())
             return
 
@@ -1372,7 +1371,7 @@ class MatchCreate(BasePacket):
         player.update_latest_activity_soon()
         player.join_match(match, self.match_data.passwd)
 
-        match.chat.send_bot(f"Match created by {player.name}.")
+        match.chat.send_bot(f"{player.name}によってルームが作成されました。参加しましょう!")
         log(f"{player} created a new multiplayer match.")
 
 
@@ -2129,7 +2128,7 @@ class MatchChangePassword(BasePacket):
             return
 
         if player is not player.match.host:
-            log(f"{player} attempted to change pw as non-host.", Ansi.LYELLOW)
+            log(f"{player}は、非ホストとしてパスワードを変更しようとしました({player} attempted to change pw as non-host)", Ansi.LYELLOW)
             return
 
         player.match.passwd = self.match.passwd

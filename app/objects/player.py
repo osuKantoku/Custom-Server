@@ -342,7 +342,7 @@ class Player:
     @property
     def url(self) -> str:
         """The url to the player's profile."""
-        return f"https://{app.settings.DOMAIN}/u/{self.id}"
+        return f"https://web.mamesosu.net/profile/id={self.id}/mode=std/special=none/bestpp=1&mostplays=1&recentplays=1#recentplays"
 
     @property
     def embed(self) -> str:

@@ -82,7 +82,6 @@ class SubmissionStatus(IntEnum):
             self.BEST: "Best",
         }[self]
 
-
 class Score:
     """\
     Server side representation of an osu! score; any gamemode.
