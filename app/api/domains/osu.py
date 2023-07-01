@@ -326,6 +326,15 @@ async def osuGetFavourites(
 
     return "\n".join([str(row["setid"]) for row in rows]).encode()
 
+@router.get("/u/{user_id}")
+async def profile_redirect(user_id: int):
+    redirect_url = f"https://web.mamesosu.net/profile/id={user_id}/mode=std/special=none/bestpp=1&mostplays=1&recentplays=1"
+    return RedirectResponse(redirect_url)
+
+@router.get("/home/account/edit")
+def redirect_to_external_url():
+    redirect_url = "https://web.mamesosu.net/"
+    return RedirectResponse(redirect_url)
 
 @router.get("/web/osu-addfavourite.php")
 async def osuAddFavourite(
@@ -1899,38 +1908,6 @@ async def register_account(
             content=errors_full,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
-
-    if check == 0:
-        # the client isn't just checking values,
-        # they want to register the account now.
-        # make the md5 & bcrypt the md5 for sql.
-        pw_md5 = hashlib.md5(pw_plaintext.encode()).hexdigest().encode()
-        pw_bcrypt = bcrypt.hashpw(pw_md5, bcrypt.gensalt())
-        app.state.cache.bcrypt[pw_bcrypt] = pw_md5  # cache result for login
-
-        ip = app.state.services.ip_resolver.get_ip(request.headers)
-
-        geoloc = await app.state.services.fetch_geoloc(ip, request.headers)
-
-        async with app.state.services.database.transaction():
-            # add to `users` table.
-            player = await players_repo.create(
-                name=username,
-                email=email,
-                pw_bcrypt=pw_bcrypt,
-                country=geoloc["country"]["acronym"],
-            )
-
-            # add to `stats` table.
-            await stats_repo.create_all_modes(player_id=player["id"])
-
-        if app.state.services.datadog:
-            app.state.services.datadog.increment("bancho.registrations")
-
-        log(f"<{username} ({player['id']})> has registered!", Ansi.LGREEN)
-
-    return b"ok"  # success
-
 
 @router.post("/difficulty-rating")
 async def difficultyRatingHandler(request: Request):
