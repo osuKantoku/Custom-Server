@@ -722,7 +722,8 @@ async def api_get_score_info(
 @router.get("/get_replay")
 async def api_get_replay(
     score_id: int = Query(..., alias="id", ge=0, le=9_223_372_036_854_775_807),
-    include_headers: bool = False,
+    include_headers: bool = True,
+    db_conn: databases.core.Connection = Depends(acquire_db_conn),
 ):
     """Return a given replay (including headers)."""
 
@@ -737,9 +738,9 @@ async def api_get_replay(
     # read replay frames from file
     raw_replay_data = replay_file.read_bytes()
 
-    if include_headers:
-        return FileResponse(
-            path=REPLAYS_PATH / f"{score_id}.osr",
+    if not include_headers:
+        return Response(
+            raw_replay_data,
             media_type="application/octet-stream",
             headers={
                 "Content-Description": "File Transfer",
@@ -750,7 +751,7 @@ async def api_get_replay(
 
     # add replay headers from sql
     # TODO: osu_version & life graph in scores tables?
-    rec = await app.state.services.database.fetch_one(
+    row = await db_conn.fetch_one(
         "SELECT u.name username, m.md5 map_md5, "
         "m.artist, m.title, m.version, "
         "s.mode, s.n300, s.n100, s.n50, s.ngeki, "
@@ -762,7 +763,6 @@ async def api_get_replay(
         "WHERE s.id = :score_id",
         {"score_id": score_id},
     )
-    row = dict(rec._mapping) if rec is not None else None
 
     if not row:
         # score not found in sql
@@ -794,7 +794,11 @@ async def api_get_replay(
     replay_data = bytearray()
 
     # pack first section of headers.
-    replay_data += struct.pack("<Bi", row["mode"], 20200207)  # TODO: osuver
+    replay_data += struct.pack(
+        "<Bi",
+        GameMode(row["mode"]).as_vanilla,
+        20200207,
+    )  # TODO: osuver
     replay_data += app.packets.write_string(row["map_md5"])
     replay_data += app.packets.write_string(row["username"])
     replay_data += app.packets.write_string(replay_md5)
@@ -820,15 +824,15 @@ async def api_get_replay(
     replay_data += struct.pack("<i", len(raw_replay_data))
     replay_data += raw_replay_data
 
-    # pack additional info buffer.
+    # pack additional info info buffer.
     replay_data += struct.pack("<q", score_id)
 
     # NOTE: target practice sends extra mods, but
     # can't submit scores so should not be a problem.
 
     # stream data back to the client
-    return FileResponse(
-        path=REPLAYS_PATH / f"{score_id}.osr",
+    return Response(
+        bytes(replay_data),
         media_type="application/octet-stream",
         headers={
             "Content-Description": "File Transfer",
@@ -839,7 +843,6 @@ async def api_get_replay(
             ).format(**row),
         },
     )
-
 
 @router.get("/get_match")
 async def api_get_match(
