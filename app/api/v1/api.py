@@ -723,7 +723,6 @@ async def api_get_score_info(
 async def api_get_replay(
     score_id: int = Query(..., alias="id", ge=0, le=9_223_372_036_854_775_807),
     include_headers: bool = True,
-    db_conn: databases.core.Connection = Depends(acquire_db_conn),
 ):
     """Return a given replay (including headers)."""
 
@@ -751,7 +750,7 @@ async def api_get_replay(
 
     # add replay headers from sql
     # TODO: osu_version & life graph in scores tables?
-    row = await db_conn.fetch_one(
+    row = await app.state.services.database.fetch_one(
         "SELECT u.name username, m.md5 map_md5, "
         "m.artist, m.title, m.version, "
         "s.mode, s.n300, s.n100, s.n50, s.ngeki, "
